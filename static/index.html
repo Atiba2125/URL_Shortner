@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URL Shortener</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <main class="card">
+    <h1>URL Shortener</h1>
+    <p class="sub">Paste a link below to get a short one.</p>
+
+    <form id="form" novalidate>
+      <input id="url" type="url" placeholder="https://www.google.com/search?q=..." autocomplete="off" required>
+      <button id="submit" type="submit">Shorten</button>
+    </form>
+
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <div id="result" class="result" hidden>
+      <input id="short" type="text" readonly aria-label="Short link">
+      <button id="copy" type="button">Copy</button>
+    </div>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
