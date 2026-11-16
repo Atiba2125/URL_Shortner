@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -60,22 +60,28 @@ def shorten(body: ShortenRequest, db: Session = Depends(get_db)):
     raise HTTPException(status_code=503, detail="Could not allocate a short code, try again.")
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
 def index():
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(status_code=204)  # the page embeds its own icon
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 # Keep last: catch-all for short codes.
-@app.get("/{code}")
-def resolve(code: str, db: Session = Depends(get_db)):
+@app.api_route("/{code}", methods=["GET", "HEAD"], include_in_schema=False)
+def resolve(code: str, request: Request, db: Session = Depends(get_db)):
     link = db.scalar(select(Link).where(Link.code == code))
     if link is None:
         raise HTTPException(status_code=404, detail="Short link not found.")
-    db.execute(update(Link).where(Link.id == link.id).values(click_count=Link.click_count + 1))
-    db.commit()
+    if request.method == "GET":  # link-preview/health HEAD requests are not clicks
+        db.execute(update(Link).where(Link.id == link.id).values(click_count=Link.click_count + 1))
+        db.commit()
     # Plain redirect. The "keep custom domain in the address bar" proxy mode is
     # intentionally NOT implemented yet - see README (pending client clarification).
     return RedirectResponse(link.original_url, status_code=302)
