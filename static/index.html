@@ -6,7 +6,7 @@
   <meta name="description" content="Paste a long link and get a short, shareable one in a second.">
   <title>URL Shortener</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cpath d='M12 20l8-8M13 11h-1a4 4 0 000 8h1m6-8h1a4 4 0 010 8h-1' stroke='white' stroke-width='2.4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="/static/style.css?v=2">
+  <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
   <header class="nav">
@@ -59,7 +59,7 @@
     <section id="history-wrap" class="history" hidden>
       <div class="history-head">
         <h2>Recent links</h2>
-        <button id="clear" class="link-btn" type="button">Clear</button>
+        <span><button id="refresh" class="link-btn" type="button">Refresh clicks</button> &nbsp;<button id="clear" class="link-btn" type="button">Clear</button></span>
       </div>
       <ul id="history"></ul>
     </section>
@@ -67,6 +67,6 @@
 
   <footer>Built with FastAPI &middot; PostgreSQL &middot; Nginx</footer>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/app.js?v=2"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>

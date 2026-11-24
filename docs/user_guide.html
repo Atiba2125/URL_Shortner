@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>URL Shortener - Developer User Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  body { font-family: "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.5; color: #1c2330; }
+  h1 { font-size: 24pt; margin: 0 0 4px; color: #1f3fae; }
+  .sub { color: #5b6578; margin: 0 0 18px; }
+  h2 { font-size: 14pt; margin: 22px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #3b6cf6; color: #1f3fae; page-break-after: avoid; }
+  h3 { font-size: 11pt; margin: 12px 0 4px; page-break-after: avoid; }
+  p { margin: 5px 0; }
+  code { font-family: Consolas, monospace; background: #eef1f8; padding: 1px 4px; border-radius: 3px; font-size: 9.5pt; }
+  pre { background: #1e2433; color: #e8ecf6; padding: 9px 12px; border-radius: 6px; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.4; margin: 6px 0; white-space: pre-wrap; page-break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6px 0; page-break-inside: avoid; }
+  th, td { border: 1px solid #c9d0dd; padding: 5px 8px; text-align: left; vertical-align: top; font-size: 10pt; }
+  th { background: #eef1f8; }
+  .note { background: #fff6e0; border-left: 4px solid #f0a500; padding: 7px 12px; margin: 10px 0; page-break-inside: avoid; }
+  ul, ol { margin: 5px 0 5px 20px; padding: 0; }
+  li { margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<h1>URL Shortener</h1>
+<p class="sub">Developer User Guide &middot; Getting started for co-developers &middot; Repo: github.com/Atiba2125/URL_Shortner</p>
+
+<h2>1. What this project is</h2>
+<p>A URL shortener. A user pastes a long URL (for example a Google search results link) into a web page; the backend validates it, generates a short code such as <code>aB3xY9</code>, stores the mapping in a database, and returns a short link like <code>https://xyz.com/aB3xY9</code>. Opening the short link redirects to the original URL and counts the click.</p>
+<div class="note"><b>Current status.</b> Done: shortener core (API, validation, short codes), PostgreSQL support, click counting with a stats API, the frontend, an <b>admin panel</b> (login, search, edit, delete), a <b>CLI tool</b>, rate limiting, friendly error pages, 37 automated tests, and deploy/backup/hardening templates (not yet run on a real VPS). <b>Not built:</b> the client's "Google proxy / masking" mode (custom domain in the address bar while the VPS renders Google's results page, with Google cookies and Search Console tracking). It is deliberately left out &mdash; see section 12. Short links do a normal 302 redirect, so the address bar shows the destination site.</div>
+
+<h2>2. Tech stack</h2>
+<table>
+<tr><th>Layer</th><th>Technology</th></tr>
+<tr><td>Backend</td><td>Python 3.10+, FastAPI, Uvicorn</td></tr>
+<tr><td>Database</td><td>PostgreSQL in production; SQLite by default for local development (SQLAlchemy 2.0, psycopg 3)</td></tr>
+<tr><td>Frontend</td><td>Plain HTML, CSS, JavaScript (no build step, no framework)</td></tr>
+<tr><td>Config</td><td>pydantic-settings, values read from environment or a <code>.env</code> file</td></tr>
+<tr><td>Production</td><td>Ubuntu VPS, Nginx reverse proxy in front of the app, Certbot (Let's Encrypt) HTTPS, systemd</td></tr>
+<tr><td>Tests</td><td>pytest, httpx</td></tr>
+</table>
+
+<h2>3. Prerequisites</h2>
+<ul>
+<li>Python 3.10 or newer (<code>python --version</code>)</li>
+<li>Git</li>
+<li>Optional: PostgreSQL 14+ (only if you want to test against Postgres instead of SQLite)</li>
+</ul>
+
+<h2>4. Quick start (local)</h2>
+<pre>git clone https://github.com/Atiba2125/URL_Shortner.git
+cd URL_Shortner
+python -m venv venv</pre>
+<p>Activate the virtual environment:</p>
+<pre># Windows PowerShell
+venv\Scripts\Activate.ps1
+# Linux / macOS
+source venv/bin/activate</pre>
+<p>Install dependencies and start the server:</p>
+<pre>pip install -r requirements.txt
+uvicorn app.main:app --reload</pre>
+<p>Open <b>http://localhost:8000</b>. With no <code>.env</code> file the app creates a local SQLite file (<code>shortener.db</code>) automatically &mdash; nothing else to set up.</p>
+<p><b>Windows tip:</b> if PowerShell blocks <code>Activate.ps1</code>, skip activation and run <code>venv\Scripts\python -m uvicorn app.main:app --reload</code>.</p>
+
+<h2>5. Using the app</h2>
+<ol>
+<li>Open http://localhost:8000.</li>
+<li>Paste a URL and click <b>Shorten</b>.</li>
+<li>Click <b>Copy</b> to copy the short link.</li>
+<li>Open the short link &mdash; it redirects (HTTP 302) to the original URL and increments its click counter.</li>
+<li>The "Recent links" list under the form shows each link's clicks (use <b>Refresh clicks</b>).</li>
+</ol>
+<p>Interactive API docs: <b>http://localhost:8000/api/docs</b></p>
+
+<h2>6. API reference</h2>
+<table>
+<tr><th>Endpoint</th><th>Description</th></tr>
+<tr><td><code>POST /api/shorten</code></td><td>Body <code>{"url": "https://..."}</code>. Returns <code>{code, short_url, original_url}</code>. 422 if the URL is invalid; 429 if the per-IP rate limit is exceeded.</td></tr>
+<tr><td><code>GET /api/links/{code}</code></td><td>Stats: <code>{code, short_url, original_url, click_count, created_at}</code>; 404 if unknown.</td></tr>
+<tr><td><code>GET /{code}</code></td><td>302 redirect to the original URL and adds 1 to <code>click_count</code>; 404 if unknown. HEAD requests (link previews, health checks) are not counted.</td></tr>
+<tr><td><code>GET /health</code></td><td>Health check; also verifies the database connection.</td></tr>
+</table>
+<pre>curl -X POST http://localhost:8000/api/shorten -H "Content-Type: application/json" \
+  -d "{\"url\": \"https://www.google.com/search?q=pizza\"}"</pre>
+<h3>URL validation rules</h3>
+<ul>
+<li>Only <code>http://</code> and <code>https://</code>; maximum 2048 characters; no spaces or control characters.</li>
+<li>Rejected: <code>javascript:</code>, <code>ftp:</code>, localhost, private/local IP addresses, URLs with embedded <code>user:password@</code>.</li>
+<li>Optional host allow-list through <code>ALLOWED_HOSTS</code> (e.g. <code>www.google.com,google.com</code>).</li>
+</ul>
+
+<h2>7. Admin panel and CLI</h2>
+<p><b>Admin panel:</b> set <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code> in <code>.env</code> (an empty password disables the panel and returns 503), restart the server, then open <b>http://localhost:8000/admin</b> and sign in with the browser's login box. Features: link count and total clicks, search by code or URL, pagination, Copy, <b>Edit</b> (change a link's destination URL) and <b>Delete</b>. Use a long random password and HTTPS in production, because HTTP Basic login sends the password with every request.</p>
+<p><b>CLI</b> (works on the server without logging in):</p>
+<pre>python -m app.cli create "https://www.google.com/search?q=pizza"
+python -m app.cli list --limit 20
+python -m app.cli stats CODE
+python -m app.cli edit CODE "https://new-destination"
+python -m app.cli delete CODE</pre>
+<p><b>Rate limit:</b> <code>RATE_LIMIT_PER_MINUTE</code> (default 30) limits link creation per IP; extra requests get HTTP 429 with a <code>Retry-After</code> header. Nginx adds its own limit in production. <b>Errors:</b> unknown short links show a friendly 404 page in browsers and JSON to API clients.</p>
+
+<h2>8. Configuration (.env)</h2>
+<p>Copy <code>.env.example</code> to <code>.env</code> and edit. Never commit <code>.env</code> (it is git-ignored).</p>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Meaning</th></tr>
+<tr><td><code>DATABASE_URL</code></td><td>sqlite:///./shortener.db</td><td>Database connection. For Postgres: <code>postgresql+psycopg://user:pass@localhost:5432/shortener</code></td></tr>
+<tr><td><code>BASE_URL</code></td><td>http://localhost:8000</td><td>Domain used when building short links (e.g. https://xyz.com)</td></tr>
+<tr><td><code>CODE_LENGTH</code></td><td>6</td><td>Length of generated short codes</td></tr>
+<tr><td><code>MAX_URL_LENGTH</code></td><td>2048</td><td>Longest accepted URL</td></tr>
+<tr><td><code>ALLOWED_HOSTS</code></td><td>(empty = any)</td><td>Comma-separated hostnames allowed in submitted URLs</td></tr>
+<tr><td><code>ADMIN_USERNAME</code> / <code>ADMIN_PASSWORD</code></td><td>admin / (empty)</td><td>Login for <code>/admin</code>. Empty password = admin panel disabled.</td></tr>
+<tr><td><code>RATE_LIMIT_PER_MINUTE</code></td><td>30</td><td>Max links per IP per minute (0 = unlimited)</td></tr>
+</table>
+<h3>Using PostgreSQL locally</h3>
+<p><b>Windows:</b> install PostgreSQL from postgresql.org (remember the <code>postgres</code> password; you can skip Stack Builder), open <b>SQL Shell (psql)</b>, press Enter at each prompt, enter the password, then run <code>CREATE DATABASE shortener;</code>. The driver (<code>psycopg[binary]</code>) is in requirements.txt.</p>
+<p><b>Linux:</b></p>
+<pre>sudo -u postgres createuser shortener -P
+sudo -u postgres createdb -O shortener shortener</pre>
+<p>Then in <code>.env</code> set <code>DATABASE_URL=postgresql+psycopg://postgres:YOUR_PASSWORD@localhost:5432/shortener</code> and <code>BASE_URL=http://localhost:8000</code>, and restart uvicorn. Tables are created automatically on startup; introduce Alembic migrations if the schema grows. To view data use pgAdmin (Servers &rarr; PostgreSQL &rarr; Databases &rarr; shortener &rarr; Schemas &rarr; public &rarr; Tables &rarr; links &rarr; right-click &rarr; View/Edit Data &rarr; All Rows), or DB Browser for SQLite for the local <code>shortener.db</code>.</p>
+<p>To copy links from the local SQLite file into PostgreSQL (safe to run twice): <code>python -m scripts.migrate_sqlite_to_db shortener.db</code></p>
+
+<h2>9. Project structure</h2>
+<table>
+<tr><th>Path</th><th>Purpose</th></tr>
+<tr><td><code>app/main.py</code></td><td>FastAPI app: routes, redirect handler, error pages</td></tr>
+<tr><td><code>app/admin.py</code>, <code>app/security.py</code></td><td>Admin API (list/search/edit/delete) and login (HTTP Basic)</td></tr>
+<tr><td><code>app/cli.py</code>, <code>app/service.py</code>, <code>app/ratelimit.py</code></td><td>CLI tool, link creation logic, rate limiter</td></tr>
+<tr><td><code>app/config.py</code>, <code>app/db.py</code>, <code>app/models.py</code></td><td>Settings, database engine, <code>Link</code> table (code, original_url, created_at, click_count)</td></tr>
+<tr><td><code>app/validation.py</code>, <code>app/codes.py</code></td><td>URL validation rules; short-code generation (no look-alike characters, reserved words excluded)</td></tr>
+<tr><td><code>static/</code></td><td>Frontend: index.html, admin.html, 404.html, CSS and JS</td></tr>
+<tr><td><code>tests/</code></td><td>pytest suite (37 tests): API, admin, CLI, rate limit and edge cases</td></tr>
+<tr><td><code>scripts/</code></td><td><code>migrate_sqlite_to_db.py</code> &ndash; copy SQLite links into PostgreSQL</td></tr>
+<tr><td><code>deploy/</code></td><td>Nginx config, systemd service, <code>backup.sh</code>, <code>harden.sh</code></td></tr>
+</table>
+
+<h2>10. Running tests</h2>
+<pre>pytest</pre>
+<p>Tests always use a temporary SQLite database (<code>test_shortener.db</code>, git-ignored) and never touch PostgreSQL. They cover shortening, redirects, click counting, admin login/search/edit/delete, the CLI, rate limiting (429), unicode and very long URLs, malformed requests, 404 pages and more. Add a test with every change.</p>
+
+<h2>11. Deploying to production (Ubuntu VPS)</h2>
+<ol>
+<li>Install packages: <code>sudo apt install nginx postgresql python3-venv certbot python3-certbot-nginx</code></li>
+<li>Create the Postgres user and database (see section 8).</li>
+<li>Copy the project to <code>/opt/shortener</code>, create a venv, <code>pip install -r requirements.txt</code>, create <code>.env</code> with production values: real <code>BASE_URL</code> (https), a strong <code>ADMIN_PASSWORD</code>, PostgreSQL <code>DATABASE_URL</code> (<code>chmod 600 .env</code>).</li>
+<li>Install <code>deploy/shortener.service</code> to <code>/etc/systemd/system/</code>, then <code>sudo systemctl enable --now shortener</code>.</li>
+<li>Install <code>deploy/nginx-xyz.conf</code> into Nginx (change <code>xyz.com</code> to the real domain), point the DNS A record at the VPS, then run <code>sudo certbot --nginx -d yourdomain.com</code>.</li>
+<li>Security: review and run <code>deploy/harden.sh</code> (firewall allowing only SSH/HTTP/HTTPS, fail2ban, automatic security updates, PostgreSQL on localhost only).</li>
+<li>Backups: install <code>deploy/backup.sh</code> as a nightly cron job (instructions and restore command are at the top of the file; 14 days are kept). Logs are in <code>/var/log/nginx/</code> and <code>journalctl -u shortener</code>.</li>
+</ol>
+<p>The Nginx template includes an HTTPS redirect, security headers, a request-size limit and a rate limit on <code>/api/shorten</code>.</p>
+
+<h2>12. The Google proxy / masking requirement (not built)</h2>
+<p>The client briefs ask that opening a short link keeps the custom domain in the address bar while the VPS renders Google's results page through a reverse proxy (with asset/redirect rewriting, Google cookies/scripts and Search Console tracking). This is intentionally <b>not</b> implemented. Everything else in the scope &mdash; shortener, CLI, admin panel, rate limiting, error handling, tests, VPS/Nginx/SSL deployment &mdash; is implemented. Reasons:</p>
+<ul>
+<li><b>Unreliable:</b> Google blocks proxies (bot detection, CAPTCHAs, redirect links), so it cannot be guaranteed to work.</li>
+<li><b>Security and impersonation:</b> it shows Google's page under another domain, and passing Google cookies through this server would expose users' Google sessions to the server operator.</li>
+<li><b>Tracking:</b> Search Console attribution cannot be guaranteed, and making proxied clicks count as organic search clicks would be click manipulation against Google's policies.</li>
+</ul>
+<p>Do not add it unless the client states a legitimate purpose and confirms it is permitted under Google's terms. What the app does provide: branded short links that redirect to the original page, per-link click counts, an admin panel and a CLI.</p>
+
+<h2>13. Team workflow &amp; conventions</h2>
+<ul>
+<li>Branch from <code>main</code> (<code>git checkout -b feature/short-name</code>); open a pull request; get a review before merging.</li>
+<li>Run <code>pytest</code> before every push; add tests for new behaviour.</li>
+<li>Never commit secrets (<code>.env</code>), the <code>venv/</code> folder or <code>*.db</code> files.</li>
+<li>Keep the catch-all route <code>GET /{code}</code> last in <code>app/main.py</code>; new routes go above it, and new reserved paths must be added to <code>RESERVED</code> in <code>app/codes.py</code>.</li>
+</ul>
+
+<h2>14. Troubleshooting</h2>
+<table>
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td><code>Activate.ps1</code> blocked on Windows</td><td>Run <code>venv\Scripts\python -m uvicorn app.main:app --reload</code>, or <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code>.</td></tr>
+<tr><td><code>ModuleNotFoundError</code></td><td>The venv is not active or dependencies are not installed: activate it and run <code>pip install -r requirements.txt</code>.</td></tr>
+<tr><td>Port 8000 already in use</td><td>Run uvicorn with <code>--port 8001</code>.</td></tr>
+<tr><td>Cannot connect to PostgreSQL</td><td>Check <code>DATABASE_URL</code>, that the service is running, and that the user and password are correct.</td></tr>
+<tr><td>Short links show <code>localhost</code> or the wrong domain</td><td>Set <code>BASE_URL</code> in <code>.env</code>.</td></tr>
+<tr><td><code>/admin</code> returns 503</td><td><code>ADMIN_PASSWORD</code> is empty in <code>.env</code>; set it and restart.</td></tr>
+<tr><td><code>/admin</code> keeps asking for login</td><td>Wrong username or password; check <code>ADMIN_USERNAME</code> / <code>ADMIN_PASSWORD</code>.</td></tr>
+<tr><td>HTTP 429 when creating links</td><td>Rate limit reached; wait a minute or raise <code>RATE_LIMIT_PER_MINUTE</code>.</td></tr>
+</table>
+
+</body>
+</html>

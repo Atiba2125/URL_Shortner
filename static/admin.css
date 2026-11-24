@@ -1,0 +1,28 @@
+.wide { width: min(1040px, 100% - 32px); margin: 0 auto; }
+main.wide { padding-bottom: 24px; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 12px 0 18px; }
+.stat { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+.stat b { display: block; font-size: 1.8rem; }
+.stat span { color: var(--muted); font-size: .9rem; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 12px; }
+.toolbar input {
+  flex: 1; min-width: 0; padding: 11px 14px; font-size: 1rem; color: var(--text);
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px; outline: 0;
+}
+.toolbar input:focus { border-color: var(--primary); }
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.url { max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .9rem; }
+td.num { font-variant-numeric: tabular-nums; }
+td.when { white-space: nowrap; font-size: .85rem; color: var(--muted); }
+td.actions { white-space: nowrap; text-align: right; }
+td a { color: var(--primary); font-weight: 600; text-decoration: none; }
+.act { margin-left: 6px; padding: 5px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text); font-size: .85rem; }
+.act:hover { border-color: var(--primary); color: var(--primary); }
+.act.danger:hover { border-color: var(--danger); color: var(--danger); }
+.empty { padding: 24px; text-align: center; color: var(--muted); margin: 0; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; color: var(--muted); }
+.pager button:disabled { opacity: .45; cursor: default; }

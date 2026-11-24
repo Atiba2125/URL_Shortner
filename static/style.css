@@ -157,6 +157,8 @@ button { font: inherit; }
 .h-short { display: block; font-weight: 600; color: var(--primary); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .h-short:hover { text-decoration: underline; }
 .h-orig { display: block; font-size: .82rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.h-meta { display: block; font-size: .78rem; color: var(--muted); }
+.link-btn + .link-btn { margin-left: 4px; }
 .h-copy {
   padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: .9rem;
   border: 1px solid var(--border); background: transparent; color: var(--text);

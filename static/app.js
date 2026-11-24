@@ -55,7 +55,9 @@ function renderHistory() {
     a.textContent = it.short_url;
     const o = document.createElement("span");
     o.className = "h-orig"; o.textContent = it.original_url; o.title = it.original_url;
-    info.append(a, o);
+    const m = document.createElement("span");
+    m.className = "h-meta"; m.dataset.code = it.code; m.textContent = "";
+    info.append(a, o, m);
     const b = document.createElement("button");
     b.className = "h-copy"; b.type = "button"; b.textContent = "Copy";
     b.addEventListener("click", () => copyText(it.short_url));
@@ -63,11 +65,27 @@ function renderHistory() {
     return li;
   }));
 }
+/* Ask the server for the live click count of every link in the list. */
+async function refreshClicks() {
+  const metas = [...historyEl.querySelectorAll(".h-meta")];
+  await Promise.all(metas.map(async (m) => {
+    try {
+      const res = await fetch(`/api/links/${encodeURIComponent(m.dataset.code)}`);
+      if (!res.ok) { m.textContent = "link no longer exists"; return; }
+      const s = await res.json();
+      const when = new Date(s.created_at).toLocaleString();
+      m.textContent = `${s.click_count} ${s.click_count === 1 ? "click" : "clicks"} · created ${when}`;
+    } catch { /* offline: leave blank */ }
+  }));
+}
+$("refresh").addEventListener("click", refreshClicks);
+
 function addToHistory(item) {
   const items = load(HISTORY_KEY, []).filter((i) => i.code !== item.code);
   items.unshift(item);
   save(HISTORY_KEY, items.slice(0, 8));
   renderHistory();
+  refreshClicks();
 }
 $("clear").addEventListener("click", () => { save(HISTORY_KEY, []); renderHistory(); });
 
@@ -122,3 +140,4 @@ copyBtn.addEventListener("click", async () => {
 });
 
 renderHistory();
+refreshClicks();

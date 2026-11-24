@@ -1,21 +1,4 @@
-import os
-
-os.environ["DATABASE_URL"] = "sqlite:///./test_shortener.db"
-os.environ["BASE_URL"] = "https://xyz.com"
-
 import pytest
-from fastapi.testclient import TestClient
-
-from app.db import Base, engine
-from app.main import app
-
-
-@pytest.fixture()
-def client():
-    Base.metadata.drop_all(engine)
-    Base.metadata.create_all(engine)
-    return TestClient(app, follow_redirects=False)
-
 
 GOOGLE = "https://www.google.com/search?q=best+pizza&hl=en"
 
@@ -30,6 +13,30 @@ def test_shorten_and_redirect(client):
     r2 = client.get(f"/{data['code']}")
     assert r2.status_code == 302
     assert r2.headers["location"] == GOOGLE
+
+
+def test_stats_count_clicks_and_ignore_head(client):
+    code = client.post("/api/shorten", json={"url": GOOGLE}).json()["code"]
+    assert client.get(f"/api/links/{code}").json()["click_count"] == 0
+
+    client.get(f"/{code}")
+    client.get(f"/{code}")
+    client.head(f"/{code}")  # previews/health checks are not clicks
+
+    stats = client.get(f"/api/links/{code}").json()
+    assert stats["click_count"] == 2
+    assert stats["original_url"] == GOOGLE
+    assert stats["short_url"] == f"https://xyz.com/{code}"
+
+
+def test_stats_unknown_code_404(client):
+    assert client.get("/api/links/nope12").status_code == 404
+
+
+def test_codes_have_no_lookalike_characters(client):
+    for _ in range(50):
+        code = client.post("/api/shorten", json={"url": GOOGLE}).json()["code"]
+        assert not set(code) & set("0O1lI")
 
 
 def test_unknown_code_404(client):

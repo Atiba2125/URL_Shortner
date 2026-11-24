@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Admin - URL Shortener</title>
+  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/admin.css?v=1">
+</head>
+<body>
+  <header class="nav wide">
+    <a class="brand" href="/admin">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l4-4"/><path d="M9 7H8a4 4 0 000 8h1"/><path d="M15 7h1a4 4 0 010 8h-1" transform="translate(0 2)"/></svg>
+      </span>
+      <span>Admin</span>
+    </a>
+    <a class="link-btn" href="/">&larr; Shortener</a>
+  </header>
+
+  <main class="wide">
+    <section class="stats">
+      <div class="stat"><b id="s-links">-</b><span>Links</span></div>
+      <div class="stat"><b id="s-clicks">-</b><span>Total clicks</span></div>
+    </section>
+
+    <div class="toolbar">
+      <input id="q" type="search" placeholder="Search code or URL..." autocomplete="off">
+      <button id="reload" type="button" class="copy">Reload</button>
+    </div>
+
+    <p id="msg" class="error" role="alert" hidden></p>
+
+    <div class="table-wrap">
+      <table id="table">
+        <thead><tr><th>Short link</th><th>Original URL</th><th>Clicks</th><th>Created</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p id="empty" class="empty" hidden>No links found.</p>
+    </div>
+
+    <div class="pager">
+      <button id="prev" type="button" class="h-copy">&larr; Prev</button>
+      <span id="page-info"></span>
+      <button id="next" type="button" class="h-copy">Next &rarr;</button>
+    </div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/static/admin.js?v=1"></script>
+</body>
+</html>
